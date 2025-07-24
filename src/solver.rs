@@ -1,6 +1,7 @@
 use crate::ffi;
 use crate::problem::Problem;
 use papilo_sys::PAPILO_SOLVE_RESULT;
+use crate::param::Parameter;
 
 /// A struct representing a solver instance in the PaPILO library.
 pub struct Solver {
@@ -20,7 +21,9 @@ impl Solver {
         if raw.is_null() {
             panic!("Failed to create a new Solver instance");
         }
-        Self { raw, problem: None }
+        let mut solver = Self { raw, problem: None };
+        solver.set_param("message.verbosity", 0).expect("Failed to set verbosity");
+        solver
     }
 
     /// Loads a problem into the solver.
@@ -36,6 +39,11 @@ impl Solver {
         SolveInfo {
             raw: unsafe { *ffi::papilo_solver_start(self.raw) },
         }
+    }
+
+    /// Sets a parameter for the solver.
+    pub fn set_param<P: Parameter>(&mut self, key: &str, value: P) -> Result<(), String> {
+        P::set(self, key, value)
     }
 }
 
