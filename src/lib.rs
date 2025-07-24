@@ -21,6 +21,5 @@
 pub mod problem;
 /// Contains wrappers for the Papilo_Solver struct and its methods.
 pub mod solver;
-
 /// Re-export the FFI bindings to allow direct access to the underlying C functions.
 pub use papilo_sys as ffi;
