@@ -2,7 +2,7 @@
 //! Rust bindings for the PaPILO presolving library.
 //! # Example
 //! ```rust
-//! use papilo_rs::solver::Solver;
+//! use papilo_rs::solver::{SolveResult, Solver};
 //! use papilo_rs::problem::Problem;
 //!
 //!  let mut problem = Problem::new();
@@ -12,7 +12,8 @@
 //!  let mut solver = Solver::new();
 //!  solver.load_problem(problem);
 //!  let res = solver.start();
-//!  assert_eq!(res.dualbound, 30.0);
+//!  assert_eq!(res.best_solution_objective(), 30.0);
+//!  assert_eq!(res.solve_result(), SolveResult::Optimal);
 //! ```
 
 
