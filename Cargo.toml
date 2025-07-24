@@ -2,6 +2,10 @@
 name = "papilo-rs"
 version = "0.1.0"
 edition = "2024"
+description = "Rust bindings for the PaPILO library"
+repository = "https://github.com/mmghannam/papilo-sys"
+license = "Apache-2.0"
+authors = ["Mohammed Ghannam <ghannam@zib.de>"]
 
 [dependencies]
 papilo-sys = "0.1.0"
