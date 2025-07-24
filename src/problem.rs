@@ -23,7 +23,7 @@ impl Problem {
     }
 
     /// Adds a column to the problem.
-    pub fn add_col(&mut self, lb: f64, ub: f64, integer: bool, cost: f64, name: &str) {
+    pub fn add_col(&mut self, lb: f64, ub: f64, integer: bool, cost: f64, name: &str) -> usize {
         let c_name = CString::new(name).expect("Failed to create CString");
         unsafe {
             ffi::papilo_problem_add_col(
@@ -33,8 +33,32 @@ impl Problem {
                 integer.into(),
                 cost,
                 c_name.as_ptr(),
-            );
+            ).try_into()
+                .expect("Failed to add column")
         }
+    }
+
+
+    /// Adds a row to the problem.
+    pub fn add_row(&mut self, name: &str, coefficients: &[(usize, f64)], lhs: f64, rhs: f64) -> usize {
+        let c_name = CString::new(name).expect("Failed to create CString");
+        let row_id = unsafe {
+            ffi::papilo_problem_add_generic_row(
+                self.raw,
+                lhs,
+                rhs,
+                c_name.as_ptr(),
+            )
+        };
+
+        for &(col_id, coeff) in coefficients {
+            unsafe {
+                ffi::papilo_problem_add_nonzero(self.raw, row_id, col_id as i32, coeff);
+            }
+        }
+
+
+        row_id as usize
     }
 }
 
