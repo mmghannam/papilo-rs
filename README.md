@@ -1,5 +1,17 @@
 # papilo-rs
 
+[![][img_crates]][crates] [![][img_doc]][doc]
+
+[img_crates]: https://img.shields.io/crates/v/papilo-rs.svg
+
+[crates]: https://crates.io/crates/papilo-rs
+
+[img_doc]: https://img.shields.io/badge/rust-documentation-blue.svg
+
+[doc]: https://docs.rs/papilo-rs/
+
+[img_coverage]: https://img.shields.io/codecov/c/github/mmghannam/papilo-rs.svg
+
 Rust bindings for the [PaPILO](https://github.com/scipopt/papilo) (Parallel Presolve for Integer and Linear Optimization) library.
 
 ## Usage
