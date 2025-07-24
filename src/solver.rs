@@ -1,10 +1,11 @@
-use crate::problem::Problem;
 use crate::ffi;
-
+use crate::problem::Problem;
+use ffi::PAPILO_SOLVING_INFO as SolvingInfo;
 
 /// A struct representing a solver instance in the PaPILO library.
 pub struct Solver {
     raw: *mut ffi::Papilo_Solver,
+    problem: Option<Problem>,
 }
 
 impl Solver {
@@ -19,7 +20,7 @@ impl Solver {
         if raw.is_null() {
             panic!("Failed to create a new Solver instance");
         }
-        Self { raw }
+        Self { raw, problem: None }
     }
 
     /// Loads a problem into the solver.
@@ -27,16 +28,14 @@ impl Solver {
         unsafe {
             ffi::papilo_solver_load_problem(self.raw, problem.raw());
         }
+        self.problem = Some(problem);
     }
 
     /// Starts the solver with the loaded problem.
-    pub fn start(&mut self) {
-        unsafe {
-            ffi::papilo_solver_start(self.raw);
-        }
+    pub fn start(&mut self) -> SolvingInfo {
+        unsafe { *ffi::papilo_solver_start(self.raw) }
     }
 }
-
 
 impl Drop for Solver {
     fn drop(&mut self) {
@@ -45,8 +44,6 @@ impl Drop for Solver {
         }
     }
 }
-
-
 
 #[cfg(test)]
 mod tests {
@@ -59,14 +56,47 @@ mod tests {
         // The drop method will be called automatically at the end of the test
     }
 
-
     #[test]
     fn empty_problem_load() {
         let problem = Problem::new();
         let mut solver = Solver::new();
         solver.load_problem(problem);
-        assert!(!solver.raw.is_null(), "Solver instance should not be null after loading problem");
-        solver.start();
-        // The drop methods will be called automatically at the end of the test
+        assert!(
+            !solver.raw.is_null(),
+            "Solver instance should not be null after loading problem"
+        );
+        let res = solver.start();
+        println!("Solving info: {:?}", res);
+    }
+
+    #[test]
+    fn one_cont_column() {
+        let mut problem = Problem::new();
+        problem.add_col(1.5, 20.0, false, 10.0, "x2");
+
+        let mut solver = Solver::new();
+        solver.load_problem(problem);
+        assert!(
+            !solver.raw.is_null(),
+            "Solver instance should not be null after loading problem with columns"
+        );
+        let res = solver.start();
+        assert_eq!(res.dualbound, 15.0);
+    }
+
+
+    #[test]
+    fn one_int_column() {
+        let mut problem = Problem::new();
+        problem.add_col(1.5, 10.0, true, 10.0, "x1");
+
+        let mut solver = Solver::new();
+        solver.load_problem(problem);
+        assert!(
+            !solver.raw.is_null(),
+            "Solver instance should not be null after loading problem with integer columns"
+        );
+        let res = solver.start();
+        assert_eq!(res.dualbound, 20.0);
     }
 }
