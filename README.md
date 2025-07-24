@@ -15,9 +15,6 @@ cargo add papilo-rs
 Then, you can use it in your Rust code as follows:
 
 ```rust
-
-
-```rust
 use papilo_rs::{Solver, Problem};
 
 fn main() {
