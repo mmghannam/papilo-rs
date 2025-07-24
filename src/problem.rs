@@ -49,16 +49,22 @@ impl Problem {
                 rhs,
                 c_name.as_ptr(),
             )
-        };
+        } as usize;
 
         for &(col_id, coeff) in coefficients {
-            unsafe {
-                ffi::papilo_problem_add_nonzero(self.raw, row_id, col_id as i32, coeff);
-            }
+            self.set_row_coef(row_id, col_id, coeff);
         }
 
 
-        row_id as usize
+        row_id
+    }
+
+
+    /// Sets a coefficient for a specific row and column.
+    pub fn set_row_coef(&mut self, row_id: usize, col_id: usize, value: f64) {
+        unsafe {
+            ffi::papilo_problem_add_nonzero(self.raw, row_id as i32, col_id as i32, value);
+        }
     }
 }
 
