@@ -1,6 +1,6 @@
 use crate::ffi;
 use crate::param::{ParamResult, Parameter};
-use crate::presolve::{PostsolveError, PresolveStatus, ReducedProblem};
+use crate::presolve::{PostsolveError, PresolveStatus, ReducedProblem, WrongLength};
 use crate::problem::Problem;
 
 /// Convert a value using PaPILO's infinity sentinel into a Rust `f64`,
@@ -204,6 +204,42 @@ impl Presolver {
             Err(PostsolveError::Failed)
         }
     }
+
+    /// Maps a primal solution of the original problem **forward** to the reduced
+    /// problem space (the inverse direction of [`postsolve`](Self::postsolve)).
+    ///
+    /// `original` must have one entry per original column (see
+    /// [`num_cols`](Self::num_cols)). Returns a solution with one entry per
+    /// reduced column (see [`ReducedProblem::num_cols`]).
+    ///
+    /// The forward map is linear and exact, including for aggregating
+    /// reductions (parallel-column merges, where a reduced variable is a linear
+    /// combination of original variables). For a feasible solution of the
+    /// original problem this yields the corresponding reduced solution; in
+    /// particular `transform_solution(postsolve(z)) == z`.
+    ///
+    /// This must be called after [`presolve`](Self::presolve).
+    pub fn transform_solution(&self, original: &[f64]) -> Result<Vec<f64>, WrongLength> {
+        let expected = self.num_cols();
+        if original.len() != expected {
+            return Err(WrongLength {
+                expected,
+                got: original.len(),
+            });
+        }
+
+        let num_reduced =
+            unsafe { ffi::papilo_presolver_get_reduced_num_cols(self.raw) } as usize;
+        let mut reduced = vec![0.0; num_reduced];
+        unsafe {
+            ffi::papilo_presolver_transform_solution(
+                self.raw,
+                original.as_ptr(),
+                reduced.as_mut_ptr(),
+            );
+        }
+        Ok(reduced)
+    }
 }
 
 impl Default for Presolver {
@@ -320,5 +356,79 @@ mod tests {
         problem.add_row("r", &[(0, 1.0), (1, 1.0)], 0.0, 1.0);
         assert_eq!(problem.num_cols(), 2);
         assert_eq!(problem.num_rows(), 1);
+    }
+
+    #[test]
+    fn transform_solution_subset_case() {
+        // No aggregation: the forward map is a plain gather via orig_col.
+        let mut problem = Problem::new();
+        let x = problem.add_col(0.0, 10.0, false, 1.0, "x");
+        let y = problem.add_col(0.0, 10.0, false, 1.0, "y");
+        problem.add_row("r0", &[(x, 1.0), (y, 2.0)], 4.0, f64::INFINITY);
+        problem.add_row("r1", &[(x, 3.0), (y, 1.0)], 5.0, f64::INFINITY);
+
+        let mut presolver = Presolver::new();
+        presolver.set_param("presolve.dualreds", 0).unwrap();
+        presolver.presolve(problem);
+
+        let reduced = presolver.reduced_problem();
+        let original = vec![2.0, 3.0];
+        let z = presolver.transform_solution(&original).unwrap();
+        assert_eq!(z.len(), reduced.num_cols);
+        // Each reduced column maps to one original column.
+        for (k, &oc) in reduced.orig_col.iter().enumerate() {
+            assert_eq!(z[k], original[oc]);
+        }
+    }
+
+    #[test]
+    fn transform_solution_handles_parallel_column_merge() {
+        // x and y are parallel (col_y = 2*col_x, obj_y = 2*obj_x); w keeps the
+        // rows non-parallel and keeps both columns at >= 2 nonzeros so the
+        // parallel-column merge actually fires.
+        let mut problem = Problem::new();
+        let x = problem.add_col(0.0, 10.0, false, 1.0, "x");
+        let y = problem.add_col(0.0, 10.0, false, 2.0, "y");
+        let w = problem.add_col(0.0, 10.0, false, 1.0, "w");
+        problem.add_row("r0", &[(x, 1.0), (y, 2.0), (w, 1.0)], 5.0, f64::INFINITY);
+        problem.add_row("r1", &[(x, 1.0), (y, 2.0), (w, 5.0)], f64::NEG_INFINITY, 40.0);
+
+        let mut presolver = Presolver::new();
+        presolver.presolve(problem);
+
+        let reduced = presolver.reduced_problem();
+        // x and y are merged into a single reduced column (plus w).
+        assert_eq!(reduced.num_cols, 2, "parallel columns should be merged");
+
+        // A feasible original point: x + 2y = 4, w = 1.
+        let x_star = vec![2.0, 1.0, 1.0];
+        let z_star = presolver.transform_solution(&x_star).unwrap();
+
+        // postsolve picks a (possibly different) split of the merged variable...
+        let x2 = presolver.postsolve(&z_star).unwrap();
+        assert_ne!(
+            x2, x_star,
+            "postsolve is expected to choose a different split of the merged variable"
+        );
+
+        // ...yet the forward map recombines it back to exactly z_star, which a
+        // naive per-column gather could not do.
+        let z2 = presolver.transform_solution(&x2).unwrap();
+        for (a, b) in z2.iter().zip(z_star.iter()) {
+            assert!((a - b).abs() < 1e-9, "round-trip mismatch: {a} vs {b}");
+        }
+    }
+
+    #[test]
+    fn transform_solution_rejects_wrong_length() {
+        let mut problem = Problem::new();
+        let x = problem.add_col(0.0, 10.0, false, 1.0, "x");
+        problem.add_row("r0", &[(x, 1.0)], 1.0, f64::INFINITY);
+
+        let mut presolver = Presolver::new();
+        presolver.presolve(problem);
+
+        let err = presolver.transform_solution(&[1.0, 2.0]).unwrap_err();
+        assert_eq!(err, WrongLength { expected: 1, got: 2 });
     }
 }
