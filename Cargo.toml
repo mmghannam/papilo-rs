@@ -8,4 +8,4 @@ license = "Apache-2.0"
 authors = ["Mohammed Ghannam <ghannam@zib.de>"]
 
 [dependencies]
-papilo-sys = "0.1.0"
+papilo-sys = { git = "https://github.com/mmghannam/papilo-sys.git", branch = "main" }
