@@ -43,7 +43,7 @@ impl Problem {
     pub fn add_row(&mut self, name: &str, coefficients: &[(usize, f64)], lhs: f64, rhs: f64) -> usize {
         let c_name = CString::new(name).expect("Failed to create CString");
         let row_id = unsafe {
-            ffi::papilo_problem_add_generic_row(
+            ffi::papilo_problem_add_row(
                 self.raw,
                 lhs,
                 rhs,
@@ -65,6 +65,44 @@ impl Problem {
         unsafe {
             ffi::papilo_problem_add_nonzero(self.raw, row_id as i32, col_id as i32, value);
         }
+    }
+
+    /// Returns the number of columns (variables) currently in the problem.
+    pub fn num_cols(&self) -> usize {
+        unsafe { ffi::papilo_problem_get_num_cols(self.raw) as usize }
+    }
+
+    /// Returns the number of rows (constraints) currently in the problem.
+    pub fn num_rows(&self) -> usize {
+        unsafe { ffi::papilo_problem_get_num_rows(self.raw) as usize }
+    }
+
+    /// Changes the lower bound of a column.
+    pub fn change_col_lb(&mut self, col_id: usize, lb: f64) {
+        unsafe { ffi::papilo_problem_change_col_lb(self.raw, col_id as i32, lb) };
+    }
+
+    /// Changes the upper bound of a column.
+    pub fn change_col_ub(&mut self, col_id: usize, ub: f64) {
+        unsafe { ffi::papilo_problem_change_col_ub(self.raw, col_id as i32, ub) };
+    }
+
+    /// Changes the objective coefficient of a column.
+    pub fn change_col_obj(&mut self, col_id: usize, obj: f64) {
+        unsafe { ffi::papilo_problem_change_col_obj(self.raw, col_id as i32, obj) };
+    }
+
+    /// Changes whether a column is integer-constrained.
+    pub fn change_col_integral(&mut self, col_id: usize, integral: bool) {
+        unsafe {
+            ffi::papilo_problem_change_col_integral(self.raw, col_id as i32, integral.into())
+        };
+    }
+}
+
+impl Default for Problem {
+    fn default() -> Self {
+        Self::new()
     }
 }
 

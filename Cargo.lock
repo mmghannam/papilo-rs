@@ -156,8 +156,7 @@ dependencies = [
 [[package]]
 name = "papilo-sys"
 version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fde191be764624364c6803f34aa8cb231bdda60eb8444e0929de676019475a7b"
+source = "git+https://github.com/mmghannam/papilo-sys.git?branch=wire-presolve-fork#9934168e7282188c9e9d7b61ffadd752ab404769"
 dependencies = [
  "bindgen",
  "cmake",
