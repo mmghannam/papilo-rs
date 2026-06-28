@@ -119,3 +119,26 @@ impl std::fmt::Display for PostsolveError {
 }
 
 impl std::error::Error for PostsolveError {}
+
+/// Error returned when
+/// [`Presolver::transform_solution`](crate::presolver::Presolver::transform_solution)
+/// is given a solution of the wrong length.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct WrongLength {
+    /// The number of values that were expected (the original column count).
+    pub expected: usize,
+    /// The number of values that were provided.
+    pub got: usize,
+}
+
+impl std::fmt::Display for WrongLength {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "solution has wrong length: expected {}, got {}",
+            self.expected, self.got
+        )
+    }
+}
+
+impl std::error::Error for WrongLength {}

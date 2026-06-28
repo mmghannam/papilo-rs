@@ -156,7 +156,7 @@ dependencies = [
 [[package]]
 name = "papilo-sys"
 version = "0.1.0"
-source = "git+https://github.com/mmghannam/papilo-sys.git?branch=main#9404b544fbc150091ae3b2a7cd85009d310cd6c6"
+source = "git+https://github.com/mmghannam/papilo-sys.git?branch=main#1911f278a7f474cb47b554d1e3db23465fea5e75"
 dependencies = [
  "bindgen",
  "cmake",
